@@ -10,6 +10,7 @@ const TOKEN_STORAGE_KEY = "temp_tracker_token_v1";
 const temperatureValueEl = document.getElementById("temperatureValue");
 const increaseBtn = document.getElementById("increaseBtn");
 const decreaseBtn = document.getElementById("decreaseBtn");
+const temperatureSliderEl = document.getElementById("temperatureSlider");
 const submitBtn = document.getElementById("submitBtn");
 const statusMessageEl = document.getElementById("statusMessage");
 const historyListEl = document.getElementById("historyList");
@@ -124,6 +125,7 @@ function updateTemperature(delta) {
   const nextValue = Math.min(MAX_TEMP, Math.max(MIN_TEMP, currentTemperature + delta));
   currentTemperature = Math.round(nextValue * 10) / 10;
   temperatureValueEl.textContent = formatTemperature(currentTemperature);
+  temperatureSliderEl.value = String(currentTemperature);
 }
 
 function formatTimestamp(rawTimestamp) {
@@ -139,19 +141,12 @@ function formatTimestamp(rawTimestamp) {
 }
 
 function formatWeekLabel(date) {
-  const start = new Date(date);
-  const day = start.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() + mondayOffset);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-
-  const formatter = new Intl.DateTimeFormat("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-  });
-  return `Неделя ${formatter.format(start)} - ${formatter.format(end)}`;
+  const temp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = temp.getUTCDay() || 7;
+  temp.setUTCDate(temp.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(temp.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil(((temp - yearStart) / 86400000 + 1) / 7);
+  return `Неделя №${weekNo}`;
 }
 
 function formatWeekdayTimestamp(rawTimestamp) {
@@ -183,48 +178,54 @@ function formatDurationMs(ms) {
   return hoursRemainder ? `${days} д ${hoursRemainder} ч` : `${days} д`;
 }
 
+function sortHistoryItemsDesc(items) {
+  return items.slice().sort((a, b) => {
+    const aTime = new Date(a.timestamp).getTime();
+    const bTime = new Date(b.timestamp).getTime();
+    if (Number.isNaN(aTime) && Number.isNaN(bTime)) {
+      return 0;
+    }
+    if (Number.isNaN(aTime)) {
+      return 1;
+    }
+    if (Number.isNaN(bTime)) {
+      return -1;
+    }
+    return bTime - aTime;
+  });
+}
+
+function formatExcelDate(rawTimestamp) {
+  const date = new Date(rawTimestamp);
+  if (Number.isNaN(date.getTime())) {
+    return String(rawTimestamp);
+  }
+  const pad2 = (value) => String(value).padStart(2, "0");
+  return (
+    `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}` +
+    ` ${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`
+  );
+}
+
 function buildHistoryText(items) {
   if (!items.length) {
-    return "История пуста.";
+    return "date\ttemperature";
   }
 
-  const lines = ["История измерений температуры", ""];
-  let previousTimestamp = null;
-  let previousWeekLabel = "";
-
+  const lines = ["date\ttemperature"];
   items.forEach((item) => {
-    const itemDate = new Date(item.timestamp);
-    const weekLabel = Number.isNaN(itemDate.getTime()) ? "Без даты" : formatWeekLabel(itemDate);
-    if (weekLabel !== previousWeekLabel) {
-      lines.push(weekLabel);
-      previousWeekLabel = weekLabel;
-    }
-
-    const currentTimestamp = Number.isNaN(itemDate.getTime()) ? null : itemDate.getTime();
-    const deltaText =
-      previousTimestamp && currentTimestamp
-        ? `интервал ${formatDurationMs(previousTimestamp - currentTimestamp)}`
-        : "первый замер";
     lines.push(
-      `- ${formatWeekdayTimestamp(item.timestamp)} | ${formatTemperature(Number(item.temperature))} | ${deltaText}`
+      `${formatExcelDate(item.timestamp)}\t${formatTemperature(Number(item.temperature))}`
     );
-    if (currentTimestamp) {
-      previousTimestamp = currentTimestamp;
-    }
   });
-
   return lines.join("\n");
 }
 
 function setCopyButtonsFeedback(isCopied) {
   copyHistoryBtns.forEach((button) => {
     button.classList.toggle("is-copied", isCopied);
-    if (button.classList.contains("copy-btn-full")) {
-      button.textContent = isCopied ? "Скопировано" : "Скопировать историю";
-    } else {
-      button.setAttribute("aria-label", isCopied ? "Скопировано" : "Скопировать историю");
-      button.setAttribute("title", isCopied ? "Скопировано" : "Скопировать историю");
-    }
+    button.setAttribute("aria-label", isCopied ? "Скопировано" : "Скопировать историю");
+    button.setAttribute("title", isCopied ? "Скопировано" : "Скопировать историю");
   });
 }
 
@@ -232,6 +233,15 @@ function setCopyButtonsVisible(isVisible) {
   copyHistoryBtns.forEach((button) => {
     button.hidden = !isVisible;
   });
+}
+
+function onSliderInput() {
+  const sliderValue = Number(temperatureSliderEl.value);
+  if (Number.isNaN(sliderValue)) {
+    return;
+  }
+  currentTemperature = Math.round(sliderValue * 10) / 10;
+  temperatureValueEl.textContent = formatTemperature(currentTemperature);
 }
 
 async function copyTextToClipboard(text) {
@@ -272,11 +282,12 @@ async function copyHistoryToClipboard() {
 }
 
 function renderHistory(items) {
-  latestHistoryItems = items.slice();
-  setCopyButtonsVisible(items.length > 0);
+  const sortedItems = sortHistoryItemsDesc(items);
+  latestHistoryItems = sortedItems;
+  setCopyButtonsVisible(sortedItems.length > 0);
   historyListEl.innerHTML = "";
 
-  if (!items.length) {
+  if (!sortedItems.length) {
     const emptyItem = document.createElement("li");
     emptyItem.className = "history-item";
     emptyItem.textContent = "Записей пока нет";
@@ -287,7 +298,7 @@ function renderHistory(items) {
   let previousTimestamp = null;
   let previousWeekLabel = "";
 
-  items.forEach((item) => {
+  sortedItems.forEach((item) => {
     const itemDate = new Date(item.timestamp);
     const weekLabel = Number.isNaN(itemDate.getTime()) ? "Без даты" : formatWeekLabel(itemDate);
     if (weekLabel !== previousWeekLabel) {
@@ -302,7 +313,7 @@ function renderHistory(items) {
     const deltaText =
       previousTimestamp && currentTimestamp
         ? `🕑: ${formatDurationMs(previousTimestamp - currentTimestamp)}`
-        : `🕑: ${formatDurationMs(currentTimestamp - new Date().getTime())}`;
+        : "🕑: --";
     const li = document.createElement("li");
     li.className = "history-item";
     li.innerHTML = `
@@ -459,6 +470,7 @@ async function authorize() {
 increaseBtn.addEventListener("click", () => updateTemperature(STEP));
 decreaseBtn.addEventListener("click", () => updateTemperature(-STEP));
 submitBtn.addEventListener("click", submitTemperature);
+temperatureSliderEl.addEventListener("input", onSliderInput);
 authBtnEl.addEventListener("click", authorize);
 resetAccessBtnEl.addEventListener("click", resetAccess);
 copyHistoryBtns.forEach((button) => {
@@ -470,6 +482,7 @@ authCodeInputEl.addEventListener("keydown", (event) => {
   }
 });
 
+setCopyButtonsVisible(false);
 authToken = getStoredToken();
 if (isFileProtocol()) {
   isLocalPreviewMode = true;

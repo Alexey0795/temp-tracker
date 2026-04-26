@@ -36,6 +36,16 @@
               ▲
             </button>
           </div>
+          <input
+            id="temperatureSlider"
+            class="temperature-slider"
+            type="range"
+            min="34"
+            max="42"
+            step="0.1"
+            value="36.6"
+            aria-label="Ползунок температуры"
+          />
           <button id="submitBtn" class="submit-btn" type="button">Отправить данные</button>
         </section>
 
@@ -59,9 +69,22 @@
             </button>
           </div>
           <ul id="historyList" class="history-list"></ul>
-          <button type="button" class="copy-btn copy-btn-full" data-copy-history>
-            Скопировать историю
-          </button>
+          <div class="history-footer">
+            <span aria-hidden="true"></span>
+            <button
+              type="button"
+              class="copy-btn copy-btn-icon"
+              data-copy-history
+              aria-label="Скопировать историю"
+              title="Скопировать историю"
+            >
+              <span class="copy-icon" aria-hidden="true">
+                <span class="copy-sheet copy-sheet-back"></span>
+                <span class="copy-sheet copy-sheet-front"></span>
+              </span>
+              <span class="copy-done" aria-hidden="true">✓</span>
+            </button>
+          </div>
         </section>
 
         <footer class="app-footer">

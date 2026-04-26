@@ -91,10 +91,15 @@ body {
 .submit-btn {
   display: block;
   width: 100%;
-  margin-top: 79px;
   padding: 14px;
   font-size: 1.2rem;
   font-weight: bold;
+}
+
+.temperature-slider {
+  width: 100%;
+  margin-top: 90px;
+  margin-bottom: 90px;
 }
 
 .ghost-btn {
@@ -209,19 +214,6 @@ body {
   display: inline;
 }
 
-.copy-btn-full {
-  margin-top: 10px;
-  width: 100%;
-  min-height: 38px;
-  border-radius: 9px;
-  font-size: 0.92rem;
-}
-
-.copy-btn-full.is-copied::after {
-  content: " (Скопировано)";
-  color: var(--success);
-}
-
 .copy-btn.is-copied {
   background: #edf7ef;
   color: #2f6b3d;
@@ -231,6 +223,14 @@ body {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.history-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .history-item {
