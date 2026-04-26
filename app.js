@@ -1,5 +1,6 @@
 // Вставьте URL вашего опубликованного Google Apps Script Web App.
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxhNO4Sd0_8cy7GEieyMqoys6eav3XLPoqFz3d7E_r2/dev";
+// Желательно сразу использовать /exec URL.
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz4x_VbNPwLzniEVAh3R7BmYvXgnR8aawtWdzBCYuoy0CbjT9xnketHB-4jbSXsoFSdRA/exec";
 const STEP = 0.1;
 const MIN_TEMP = 34.0;
 const MAX_TEMP = 42.0;
@@ -13,6 +14,17 @@ const statusMessageEl = document.getElementById("statusMessage");
 const historyListEl = document.getElementById("historyList");
 
 let currentTemperature = 36.6;
+
+function resolveGasUrl() {
+  if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "PASTE_GAS_WEB_APP_URL_HERE") {
+    return "";
+  }
+
+  const normalized = GAS_WEB_APP_URL.trim();
+  // /dev работает только для тестового запуска владельцем скрипта,
+  // поэтому для клиентского приложения принудительно используем /exec.
+  return normalized.replace(/\/dev(?:\?.*)?$/i, "/exec");
+}
 
 function formatTemperature(value) {
   return value.toFixed(1);
@@ -67,13 +79,14 @@ function renderHistory(items) {
 }
 
 async function loadHistory() {
-  if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "PASTE_GAS_WEB_APP_URL_HERE") {
+  const gasUrl = resolveGasUrl();
+  if (!gasUrl) {
     renderHistory([]);
     return;
   }
 
   try {
-    const url = `${GAS_WEB_APP_URL}?action=history&limit=${HISTORY_LIMIT}`;
+    const url = `${gasUrl}?action=history&limit=${HISTORY_LIMIT}`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
@@ -89,7 +102,8 @@ async function loadHistory() {
 }
 
 async function submitTemperature() {
-  if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "PASTE_GAS_WEB_APP_URL_HERE") {
+  const gasUrl = resolveGasUrl();
+  if (!gasUrl) {
     setStatus("Укажите URL Google Apps Script в app.js", "error");
     return;
   }
@@ -102,12 +116,21 @@ async function submitTemperature() {
       temperature: Number(formatTemperature(currentTemperature)),
       timestamp: new Date().toISOString(),
     };
+    // Для GAS в браузере POST может падать из-за CORS/redirect.
+    // Поэтому основной путь — GET с query-параметрами.
+    const getUrl = `${gasUrl}?action=append&temperature=${encodeURIComponent(
+      String(payload.temperature)
+    )}&timestamp=${encodeURIComponent(payload.timestamp)}`;
+    let response = await fetch(getUrl);
 
-    const response = await fetch(GAS_WEB_APP_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    // Fallback: если GET не сработал, пробуем POST.
+    if (!response.ok) {
+      response = await fetch(gasUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
@@ -122,7 +145,7 @@ async function submitTemperature() {
     await loadHistory();
   } catch (error) {
     console.error("Failed to submit temperature:", error);
-    setStatus("Ошибка сохранения. Повторите попытку.", "error");
+    setStatus("Ошибка сохранения. Проверьте deploy /exec и права доступа Web App.", "error");
   } finally {
     submitBtn.disabled = false;
   }

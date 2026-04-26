@@ -37,6 +37,9 @@ function doPost(e) {
 
 function doGet(e) {
   const action = (e && e.parameter && e.parameter.action) || "";
+  if (action === "append") {
+    return appendFromGet_(e);
+  }
   if (action === "history") {
     return getHistory_(e);
   }
@@ -45,6 +48,37 @@ function doGet(e) {
     ok: true,
     message: "Temp-Tracker GAS is running",
   });
+}
+
+function appendFromGet_(e) {
+  try {
+    const temperature = Number(e && e.parameter && e.parameter.temperature);
+    const rawTimestamp = e && e.parameter && e.parameter.timestamp;
+    const timestamp = rawTimestamp ? new Date(rawTimestamp) : new Date();
+
+    if (Number.isNaN(temperature)) {
+      throw new Error("Temperature is required and must be a number");
+    }
+    if (Number.isNaN(timestamp.getTime())) {
+      throw new Error("Invalid timestamp");
+    }
+
+    const sheet = getSheet_();
+    sheet.appendRow([timestamp, temperature]);
+
+    return jsonResponse_({
+      ok: true,
+      saved: {
+        timestamp: timestamp.toISOString(),
+        temperature: temperature,
+      },
+    });
+  } catch (error) {
+    return jsonResponse_({
+      ok: false,
+      error: error.message || "Unexpected error",
+    });
+  }
 }
 
 function getHistory_(e) {
