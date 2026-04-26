@@ -22,6 +22,10 @@ const trackerPanelEl = document.getElementById("trackerPanel");
 let currentTemperature = 36.6;
 let authToken = "";
 
+function isFileProtocol() {
+  return window.location.protocol === "file:";
+}
+
 function resolveGasUrl() {
   if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "PASTE_GAS_WEB_APP_URL_HERE") {
     return "";
@@ -83,6 +87,17 @@ function clearToken() {
 function setAuthState(isAuthorized) {
   authPanelEl.hidden = isAuthorized;
   trackerPanelEl.hidden = !isAuthorized;
+}
+
+async function postToGas(gasUrl, payload) {
+  // Для GAS избегаем preflight: отправляем как text/plain.
+  // Это повышает шанс корректной работы CORS для браузера.
+  return fetch(gasUrl, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(payload),
+    redirect: "follow",
+  });
 }
 
 function updateTemperature(delta) {
@@ -165,11 +180,7 @@ async function submitTemperature() {
       timestamp: new Date().toISOString(),
       token: authToken,
     };
-    const response = await fetch(gasUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const response = await postToGas(gasUrl, payload);
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
@@ -218,13 +229,13 @@ async function authorize() {
   setAuthMessage("Проверяем код...", "");
 
   try {
-    const response = await fetch(gasUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "auth",
-        code: code,
-      }),
+    if (isFileProtocol()) {
+      throw new Error("LOCAL_FILE_ORIGIN");
+    }
+
+    const response = await postToGas(gasUrl, {
+      action: "auth",
+      code: code,
     });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
@@ -243,6 +254,21 @@ async function authorize() {
     await loadHistory();
   } catch (error) {
     console.error("Failed to authorize:", error);
+    const message = String(error && error.message ? error.message : "");
+    if (message.includes("LOCAL_FILE_ORIGIN") || isFileProtocol()) {
+      setAuthMessage(
+        "Откройте сайт через http(s), а не file:// (например, GitHub Pages или локальный сервер).",
+        "error"
+      );
+      return;
+    }
+    if (message.includes("Failed to fetch")) {
+      setAuthMessage(
+        "Сеть/CORS: проверьте deploy Web App и открывайте страницу не из файла, а по URL.",
+        "error"
+      );
+      return;
+    }
     setAuthMessage("Неверный код или ошибка доступа к серверу.", "error");
   } finally {
     authBtnEl.disabled = false;
@@ -260,6 +286,12 @@ authCodeInputEl.addEventListener("keydown", (event) => {
 });
 
 authToken = getStoredToken();
+if (isFileProtocol()) {
+  setAuthMessage(
+    "Текущий запуск через file://. Для авторизации откройте сайт по http(s).",
+    "error"
+  );
+}
 if (authToken) {
   setAuthState(true);
   loadHistory();
