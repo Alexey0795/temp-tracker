@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Temp Tracker</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <h1 class="title">Temp Tracker</h1>
+
+      <section class="panel input-panel">
+        <p class="label">Текущая температура</p>
+        <div class="temperature-row">
+          <button id="decreaseBtn" class="arrow-btn" type="button" aria-label="Уменьшить">
+            ▼
+          </button>
+          <output id="temperatureValue" class="temperature-value">36.6</output>
+          <button id="increaseBtn" class="arrow-btn" type="button" aria-label="Увеличить">
+            ▲
+          </button>
+        </div>
+        <button id="submitBtn" class="submit-btn" type="button">Отправить данные</button>
+        <p id="statusMessage" class="status-message" aria-live="polite"></p>
+      </section>
+
+      <section class="panel history-panel">
+        <h2 class="history-title">Последние записи</h2>
+        <ul id="historyList" class="history-list"></ul>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

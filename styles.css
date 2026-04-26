@@ -1,0 +1,153 @@
+:root {
+  color-scheme: light;
+  --bg: #f5f7fb;
+  --panel-bg: #ffffff;
+  --text: #1d2330;
+  --accent: #2f6bff;
+  --accent-pressed: #2555ca;
+  --success: #1f9d50;
+  --border: #d8dfed;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.title {
+  margin: 8px 0 16px;
+  text-align: center;
+  font-size: 2rem;
+}
+
+.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.label {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.temperature-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.temperature-value {
+  min-width: 132px;
+  text-align: center;
+  font-size: 4.2rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.arrow-btn,
+.submit-btn {
+  min-height: 44px;
+  min-width: 44px;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.arrow-btn {
+  width: 72px;
+  font-size: 2.2rem;
+}
+
+.arrow-btn:active,
+.submit-btn:active {
+  background: var(--accent-pressed);
+}
+
+.submit-btn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.status-message {
+  min-height: 24px;
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.status-message.success {
+  color: var(--success);
+}
+
+.status-message.error {
+  color: #ba1a1a;
+}
+
+.history-title {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+}
+
+.history-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-timestamp {
+  font-size: 0.95rem;
+  color: #4b5565;
+}
+
+.history-temp {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+@media (max-width: 380px) {
+  .temperature-value {
+    font-size: 3.5rem;
+    min-width: 115px;
+  }
+
+  .arrow-btn {
+    width: 64px;
+  }
+}
