@@ -87,6 +87,12 @@ function clearToken() {
 }
 
 function resetAccess() {
+  const confirmed = window.confirm(
+    "Сбросить код доступа на этом устройстве? После этого нужно будет ввести новый код."
+  );
+  if (!confirmed) {
+    return;
+  }
   clearToken();
   isLocalPreviewMode = false;
   setAuthState(false);
@@ -129,6 +135,51 @@ function formatTimestamp(rawTimestamp) {
   }).format(date);
 }
 
+function formatWeekLabel(date) {
+  const start = new Date(date);
+  const day = start.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() + mondayOffset);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  const formatter = new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+  return `Неделя ${formatter.format(start)} - ${formatter.format(end)}`;
+}
+
+function formatWeekdayTimestamp(rawTimestamp) {
+  const date = new Date(rawTimestamp);
+  if (Number.isNaN(date.getTime())) {
+    return String(rawTimestamp);
+  }
+  return new Intl.DateTimeFormat("ru-RU", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatDurationMs(ms) {
+  const totalMinutes = Math.round(ms / 60000);
+  if (totalMinutes < 60) {
+    return `${totalMinutes} мин`;
+  }
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours < 24) {
+    return minutes ? `${hours} ч ${minutes} мин` : `${hours} ч`;
+  }
+  const days = Math.floor(hours / 24);
+  const hoursRemainder = hours % 24;
+  return hoursRemainder ? `${days} д ${hoursRemainder} ч` : `${days} д`;
+}
+
 function renderHistory(items) {
   historyListEl.innerHTML = "";
 
@@ -140,14 +191,36 @@ function renderHistory(items) {
     return;
   }
 
+  let previousTimestamp = null;
+  let previousWeekLabel = "";
+
   items.forEach((item) => {
+    const itemDate = new Date(item.timestamp);
+    const weekLabel = Number.isNaN(itemDate.getTime()) ? "Без даты" : formatWeekLabel(itemDate);
+    if (weekLabel !== previousWeekLabel) {
+      const weekItem = document.createElement("li");
+      weekItem.className = "history-week";
+      weekItem.textContent = weekLabel;
+      historyListEl.appendChild(weekItem);
+      previousWeekLabel = weekLabel;
+    }
+
+    const currentTimestamp = Number.isNaN(itemDate.getTime()) ? null : itemDate.getTime();
+    const deltaText =
+      previousTimestamp && currentTimestamp
+        ? `Интервал от прошлого замера: ${formatDurationMs(previousTimestamp - currentTimestamp)}`
+        : "Первый замер в списке";
     const li = document.createElement("li");
     li.className = "history-item";
     li.innerHTML = `
-      <span class="history-timestamp">${formatTimestamp(item.timestamp)}</span>
+      <span class="history-timestamp">${formatWeekdayTimestamp(item.timestamp)}</span>
       <span class="history-temp">${formatTemperature(Number(item.temperature))}</span>
+      <span class="history-delta">${deltaText}</span>
     `;
     historyListEl.appendChild(li);
+    if (currentTimestamp) {
+      previousTimestamp = currentTimestamp;
+    }
   });
 }
 
@@ -206,7 +279,7 @@ async function submitTemperature() {
       throw new Error(data.error || "Unknown API error");
     }
 
-    setStatus("Данные сохранены ✓", "success");
+    setStatus("Отлично! Данные сохранены. Спасибо за дисциплину и заботу о здоровье ✓", "success");
     await loadHistory();
   } catch (error) {
     console.error("Failed to submit temperature:", error);

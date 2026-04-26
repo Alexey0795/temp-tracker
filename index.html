@@ -12,8 +12,6 @@
   </head>
   <body>
     <main class="app">
-      <h1 class="title">Temp Tracker</h1>
-
       <section id="authPanel" class="panel input-panel">
         <p class="label">Код доступа</p>
         <input
@@ -29,7 +27,7 @@
 
       <div id="trackerPanel">
         <section class="panel input-panel">
-          <p class="label">Текущая температура</p>
+          <p class="hint">1) Выберите температуру кнопками ▲ ▼</p>
           <div class="temperature-row">
             <button id="decreaseBtn" class="arrow-btn" type="button" aria-label="Уменьшить">
               ▼
@@ -39,15 +37,20 @@
               ▲
             </button>
           </div>
+          <p class="hint">2) Нажмите «Отправить данные»</p>
           <button id="submitBtn" class="submit-btn" type="button">Отправить данные</button>
-          <button id="resetAccessBtn" class="secondary-btn" type="button">Сменить код</button>
-          <p id="statusMessage" class="status-message" aria-live="polite"></p>
         </section>
 
+        <p id="statusMessage" class="status-message status-between-panels" aria-live="polite"></p>
+
         <section class="panel history-panel">
-          <h2 class="history-title">Последние записи</h2>
+          <h2 class="history-title">История измерений</h2>
           <ul id="historyList" class="history-list"></ul>
         </section>
+
+        <footer class="app-footer">
+          <button id="resetAccessBtn" class="ghost-btn" type="button">Сменить код доступа</button>
+        </footer>
       </div>
     </main>
 
