@@ -487,6 +487,7 @@ authToken = getStoredToken();
 if (isFileProtocol()) {
   isLocalPreviewMode = true;
   setAuthState(true);
+  renderHistory([]);
   setAuthMessage(
     "Локальный предпросмотр активен: можно проверить дизайн, но отправка отключена.",
     "success"
