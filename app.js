@@ -5,6 +5,7 @@ const STEP = 0.1;
 const MIN_TEMP = 34.0;
 const MAX_TEMP = 42.0;
 const HISTORY_LIMIT = 10;
+const TOKEN_STORAGE_KEY = "temp_tracker_token_v1";
 
 const temperatureValueEl = document.getElementById("temperatureValue");
 const increaseBtn = document.getElementById("increaseBtn");
@@ -12,8 +13,14 @@ const decreaseBtn = document.getElementById("decreaseBtn");
 const submitBtn = document.getElementById("submitBtn");
 const statusMessageEl = document.getElementById("statusMessage");
 const historyListEl = document.getElementById("historyList");
+const authPanelEl = document.getElementById("authPanel");
+const authCodeInputEl = document.getElementById("authCodeInput");
+const authBtnEl = document.getElementById("authBtn");
+const authMessageEl = document.getElementById("authMessage");
+const trackerPanelEl = document.getElementById("trackerPanel");
 
 let currentTemperature = 36.6;
+let authToken = "";
 
 function resolveGasUrl() {
   if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "PASTE_GAS_WEB_APP_URL_HERE") {
@@ -36,6 +43,46 @@ function setStatus(message, type) {
   if (type) {
     statusMessageEl.classList.add(type);
   }
+}
+
+function setAuthMessage(message, type) {
+  authMessageEl.textContent = message;
+  authMessageEl.className = "status-message";
+  if (type) {
+    authMessageEl.classList.add(type);
+  }
+}
+
+function getStoredToken() {
+  try {
+    return localStorage.getItem(TOKEN_STORAGE_KEY) || "";
+  } catch (error) {
+    console.error("LocalStorage is unavailable:", error);
+    return "";
+  }
+}
+
+function saveToken(token) {
+  authToken = token;
+  try {
+    localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  } catch (error) {
+    console.error("Failed to save token:", error);
+  }
+}
+
+function clearToken() {
+  authToken = "";
+  try {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch (error) {
+    console.error("Failed to remove token:", error);
+  }
+}
+
+function setAuthState(isAuthorized) {
+  authPanelEl.hidden = isAuthorized;
+  trackerPanelEl.hidden = !isAuthorized;
 }
 
 function updateTemperature(delta) {
@@ -113,24 +160,16 @@ async function submitTemperature() {
 
   try {
     const payload = {
+      action: "append",
       temperature: Number(formatTemperature(currentTemperature)),
       timestamp: new Date().toISOString(),
+      token: authToken,
     };
-    // Для GAS в браузере POST может падать из-за CORS/redirect.
-    // Поэтому основной путь — GET с query-параметрами.
-    const getUrl = `${gasUrl}?action=append&temperature=${encodeURIComponent(
-      String(payload.temperature)
-    )}&timestamp=${encodeURIComponent(payload.timestamp)}`;
-    let response = await fetch(getUrl);
-
-    // Fallback: если GET не сработал, пробуем POST.
-    if (!response.ok) {
-      response = await fetch(gasUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    }
+    const response = await fetch(gasUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
@@ -145,14 +184,85 @@ async function submitTemperature() {
     await loadHistory();
   } catch (error) {
     console.error("Failed to submit temperature:", error);
-    setStatus("Ошибка сохранения. Проверьте deploy /exec и права доступа Web App.", "error");
+    const message = String(error && error.message ? error.message : "");
+    if (message.includes("Token is invalid or expired")) {
+      clearToken();
+      setAuthState(false);
+      setStatus("", "");
+      setAuthMessage("Сессия истекла. Введите код снова.", "error");
+      return;
+    }
+    setStatus(
+      "Ошибка сохранения. Проверьте код доступа, deploy /exec и права Web App.",
+      "error"
+    );
   } finally {
     submitBtn.disabled = false;
+  }
+}
+
+async function authorize() {
+  const gasUrl = resolveGasUrl();
+  if (!gasUrl) {
+    setAuthMessage("Укажите URL Google Apps Script в app.js", "error");
+    return;
+  }
+
+  const code = authCodeInputEl.value.trim();
+  if (!code) {
+    setAuthMessage("Введите код доступа", "error");
+    return;
+  }
+
+  authBtnEl.disabled = true;
+  setAuthMessage("Проверяем код...", "");
+
+  try {
+    const response = await fetch(gasUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "auth",
+        code: code,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.ok || !data.token) {
+      throw new Error(data.error || "Authentication failed");
+    }
+
+    saveToken(String(data.token));
+    authCodeInputEl.value = "";
+    setAuthState(true);
+    setStatus("Готово. Можно отправлять данные.", "success");
+    setAuthMessage("", "");
+    await loadHistory();
+  } catch (error) {
+    console.error("Failed to authorize:", error);
+    setAuthMessage("Неверный код или ошибка доступа к серверу.", "error");
+  } finally {
+    authBtnEl.disabled = false;
   }
 }
 
 increaseBtn.addEventListener("click", () => updateTemperature(STEP));
 decreaseBtn.addEventListener("click", () => updateTemperature(-STEP));
 submitBtn.addEventListener("click", submitTemperature);
+authBtnEl.addEventListener("click", authorize);
+authCodeInputEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    authorize();
+  }
+});
 
-loadHistory();
+authToken = getStoredToken();
+if (authToken) {
+  setAuthState(true);
+  loadHistory();
+} else {
+  setAuthState(false);
+}

@@ -13,25 +13,40 @@
     <main class="app">
       <h1 class="title">Temp Tracker</h1>
 
-      <section class="panel input-panel">
-        <p class="label">Текущая температура</p>
-        <div class="temperature-row">
-          <button id="decreaseBtn" class="arrow-btn" type="button" aria-label="Уменьшить">
-            ▼
-          </button>
-          <output id="temperatureValue" class="temperature-value">36.6</output>
-          <button id="increaseBtn" class="arrow-btn" type="button" aria-label="Увеличить">
-            ▲
-          </button>
-        </div>
-        <button id="submitBtn" class="submit-btn" type="button">Отправить данные</button>
-        <p id="statusMessage" class="status-message" aria-live="polite"></p>
+      <section id="authPanel" class="panel input-panel">
+        <p class="label">Код доступа</p>
+        <input
+          id="authCodeInput"
+          class="auth-input"
+          type="password"
+          autocomplete="current-password"
+          placeholder="Введите код один раз"
+        />
+        <button id="authBtn" class="submit-btn" type="button">Войти</button>
+        <p id="authMessage" class="status-message" aria-live="polite"></p>
       </section>
 
-      <section class="panel history-panel">
-        <h2 class="history-title">Последние записи</h2>
-        <ul id="historyList" class="history-list"></ul>
-      </section>
+      <div id="trackerPanel">
+        <section class="panel input-panel">
+          <p class="label">Текущая температура</p>
+          <div class="temperature-row">
+            <button id="decreaseBtn" class="arrow-btn" type="button" aria-label="Уменьшить">
+              ▼
+            </button>
+            <output id="temperatureValue" class="temperature-value">36.6</output>
+            <button id="increaseBtn" class="arrow-btn" type="button" aria-label="Увеличить">
+              ▲
+            </button>
+          </div>
+          <button id="submitBtn" class="submit-btn" type="button">Отправить данные</button>
+          <p id="statusMessage" class="status-message" aria-live="polite"></p>
+        </section>
+
+        <section class="panel history-panel">
+          <h2 class="history-title">Последние записи</h2>
+          <ul id="historyList" class="history-list"></ul>
+        </section>
+      </div>
     </main>
 
     <script src="./app.js"></script>
