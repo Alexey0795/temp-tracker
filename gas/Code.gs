@@ -8,6 +8,8 @@ const MAX_TEMP = 42.0;
 const MIN_SUBMIT_INTERVAL_MS = 30 * 1000;
 const AUTH_CODE_PROPERTY = "TEMP_TRACKER_AUTH_CODE";
 const ACTIVE_TOKENS_PROPERTY = "TEMP_TRACKER_ACTIVE_TOKENS";
+const MAX_HISTORY_LIMIT_PROPERTY = "TEMP_TRACKER_MAX_HISTORY_LIMIT";
+const DEFAULT_MAX_HISTORY_LIMIT = 200;
 const TOKEN_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000; // ~180 days
 
 function doPost(e) {
@@ -65,7 +67,8 @@ function appendFromPost_(payload) {
 function getHistory_(e) {
   try {
     const limitRaw = (e && e.parameter && e.parameter.limit) || "10";
-    const limit = Math.max(1, Math.min(10, Number(limitRaw)));
+    const maxHistoryLimit = getMaxHistoryLimit_();
+    const limit = Math.max(1, Math.min(maxHistoryLimit, Number(limitRaw)));
     const sheet = getSheet_();
     const lastRow = sheet.getLastRow();
 
@@ -94,6 +97,15 @@ function getHistory_(e) {
       items: [],
     });
   }
+}
+
+function getMaxHistoryLimit_() {
+  const raw = PropertiesService.getScriptProperties().getProperty(MAX_HISTORY_LIMIT_PROPERTY);
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return DEFAULT_MAX_HISTORY_LIMIT;
+  }
+  return Math.floor(parsed);
 }
 
 function getSheet_() {

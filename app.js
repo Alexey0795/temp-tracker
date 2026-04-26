@@ -4,7 +4,7 @@ const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz4x_VbNPwLzniE
 const STEP = 0.1;
 const MIN_TEMP = 34.0;
 const MAX_TEMP = 42.0;
-const HISTORY_LIMIT = 10;
+const HISTORY_LIMIT = 100;
 const TOKEN_STORAGE_KEY = "temp_tracker_token_v1";
 
 const temperatureValueEl = document.getElementById("temperatureValue");
@@ -19,10 +19,13 @@ const authBtnEl = document.getElementById("authBtn");
 const authMessageEl = document.getElementById("authMessage");
 const trackerPanelEl = document.getElementById("trackerPanel");
 const resetAccessBtnEl = document.getElementById("resetAccessBtn");
+const copyHistoryBtns = Array.from(document.querySelectorAll("[data-copy-history]"));
 
 let currentTemperature = 36.6;
 let authToken = "";
 let isLocalPreviewMode = false;
+let latestHistoryItems = [];
+let copyFeedbackTimerId = null;
 
 function isFileProtocol() {
   return window.location.protocol === "file:";
@@ -172,7 +175,7 @@ function formatDurationMs(ms) {
   }
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (hours < 24) {
+  if (hours < 72) {
     return minutes ? `${hours} ч ${minutes} мин` : `${hours} ч`;
   }
   const days = Math.floor(hours / 24);
@@ -180,7 +183,97 @@ function formatDurationMs(ms) {
   return hoursRemainder ? `${days} д ${hoursRemainder} ч` : `${days} д`;
 }
 
+function buildHistoryText(items) {
+  if (!items.length) {
+    return "История пуста.";
+  }
+
+  const lines = ["История измерений температуры", ""];
+  let previousTimestamp = null;
+  let previousWeekLabel = "";
+
+  items.forEach((item) => {
+    const itemDate = new Date(item.timestamp);
+    const weekLabel = Number.isNaN(itemDate.getTime()) ? "Без даты" : formatWeekLabel(itemDate);
+    if (weekLabel !== previousWeekLabel) {
+      lines.push(weekLabel);
+      previousWeekLabel = weekLabel;
+    }
+
+    const currentTimestamp = Number.isNaN(itemDate.getTime()) ? null : itemDate.getTime();
+    const deltaText =
+      previousTimestamp && currentTimestamp
+        ? `интервал ${formatDurationMs(previousTimestamp - currentTimestamp)}`
+        : "первый замер";
+    lines.push(
+      `- ${formatWeekdayTimestamp(item.timestamp)} | ${formatTemperature(Number(item.temperature))} | ${deltaText}`
+    );
+    if (currentTimestamp) {
+      previousTimestamp = currentTimestamp;
+    }
+  });
+
+  return lines.join("\n");
+}
+
+function setCopyButtonsFeedback(isCopied) {
+  copyHistoryBtns.forEach((button) => {
+    button.classList.toggle("is-copied", isCopied);
+    if (button.classList.contains("copy-btn-full")) {
+      button.textContent = isCopied ? "Скопировано" : "Скопировать историю";
+    } else {
+      button.setAttribute("aria-label", isCopied ? "Скопировано" : "Скопировать историю");
+      button.setAttribute("title", isCopied ? "Скопировано" : "Скопировать историю");
+    }
+  });
+}
+
+function setCopyButtonsVisible(isVisible) {
+  copyHistoryBtns.forEach((button) => {
+    button.hidden = !isVisible;
+  });
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const success = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  if (!success) {
+    throw new Error("COPY_FAILED");
+  }
+}
+
+async function copyHistoryToClipboard() {
+  try {
+    const text = buildHistoryText(latestHistoryItems);
+    await copyTextToClipboard(text);
+    setCopyButtonsFeedback(true);
+    if (copyFeedbackTimerId) {
+      window.clearTimeout(copyFeedbackTimerId);
+    }
+    copyFeedbackTimerId = window.setTimeout(() => {
+      setCopyButtonsFeedback(false);
+      copyFeedbackTimerId = null;
+    }, 1500);
+  } catch (error) {
+    console.error("Failed to copy history:", error);
+    setStatus("Не удалось скопировать. Попробуйте еще раз.", "error");
+  }
+}
+
 function renderHistory(items) {
+  latestHistoryItems = items.slice();
+  setCopyButtonsVisible(items.length > 0);
   historyListEl.innerHTML = "";
 
   if (!items.length) {
@@ -208,14 +301,14 @@ function renderHistory(items) {
     const currentTimestamp = Number.isNaN(itemDate.getTime()) ? null : itemDate.getTime();
     const deltaText =
       previousTimestamp && currentTimestamp
-        ? `Интервал от прошлого замера: ${formatDurationMs(previousTimestamp - currentTimestamp)}`
-        : "Первый замер в списке";
+        ? `🕑: ${formatDurationMs(previousTimestamp - currentTimestamp)}`
+        : `🕑: ${formatDurationMs(currentTimestamp - new Date().getTime())}`;
     const li = document.createElement("li");
     li.className = "history-item";
     li.innerHTML = `
       <span class="history-timestamp">${formatWeekdayTimestamp(item.timestamp)}</span>
-      <span class="history-temp">${formatTemperature(Number(item.temperature))}</span>
       <span class="history-delta">${deltaText}</span>
+      <span class="history-temp">${formatTemperature(Number(item.temperature))}</span>
     `;
     historyListEl.appendChild(li);
     if (currentTimestamp) {
@@ -368,6 +461,9 @@ decreaseBtn.addEventListener("click", () => updateTemperature(-STEP));
 submitBtn.addEventListener("click", submitTemperature);
 authBtnEl.addEventListener("click", authorize);
 resetAccessBtnEl.addEventListener("click", resetAccess);
+copyHistoryBtns.forEach((button) => {
+  button.addEventListener("click", copyHistoryToClipboard);
+});
 authCodeInputEl.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     authorize();

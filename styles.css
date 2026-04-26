@@ -41,13 +41,6 @@ body {
   font-size: 1.1rem;
 }
 
-.hint {
-  margin: 2px 0 8px;
-  text-align: center;
-  font-size: 0.92rem;
-  color: #6b7280;
-}
-
 .auth-input {
   width: 100%;
   min-height: 44px;
@@ -63,6 +56,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 12px;
+  margin-top: 49px;
 }
 
 .temperature-value {
@@ -97,7 +91,7 @@ body {
 .submit-btn {
   display: block;
   width: 100%;
-  margin-top: 14px;
+  margin-top: 79px;
   padding: 14px;
   font-size: 1.2rem;
   font-weight: bold;
@@ -142,6 +136,97 @@ body {
   font-size: 1.2rem;
 }
 
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.copy-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #4b5565;
+  cursor: pointer;
+  transition: transform 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.copy-btn:active {
+  transform: scale(0.97);
+}
+
+.copy-btn-icon {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.copy-icon {
+  position: relative;
+  width: 14px;
+  height: 14px;
+}
+
+.copy-sheet {
+  position: absolute;
+  border: 1.5px solid #6b7280;
+  border-radius: 2px;
+  background: #fff;
+}
+
+.copy-sheet-back {
+  width: 10px;
+  height: 12px;
+  left: 0;
+  top: 2px;
+}
+
+.copy-sheet-front {
+  width: 10px;
+  height: 12px;
+  left: 4px;
+  top: 0;
+}
+
+.copy-done {
+  display: none;
+  font-size: 0.95rem;
+  color: var(--success);
+  font-weight: bold;
+}
+
+.copy-btn-icon.is-copied .copy-icon {
+  display: none;
+}
+
+.copy-btn-icon.is-copied .copy-done {
+  display: inline;
+}
+
+.copy-btn-full {
+  margin-top: 10px;
+  width: 100%;
+  min-height: 38px;
+  border-radius: 9px;
+  font-size: 0.92rem;
+}
+
+.copy-btn-full.is-copied::after {
+  content: " (Скопировано)";
+  color: var(--success);
+}
+
+.copy-btn.is-copied {
+  background: #edf7ef;
+  color: #2f6b3d;
+}
+
 .history-list {
   margin: 0;
   padding: 0;
@@ -149,11 +234,10 @@ body {
 }
 
 .history-item {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
+  display: flex;
+  gap: 6px;
   align-items: center;
-  padding: 10px 0;
+  padding: 7px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -170,19 +254,22 @@ body {
 }
 
 .history-timestamp {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: #4b5565;
 }
 
 .history-temp {
-  font-size: 1.1rem;
+  margin-left: auto;
+  font-size: 1rem;
   font-weight: bold;
+  white-space: nowrap;
 }
 
 .history-delta {
-  grid-column: 1 / span 2;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #9ca3af;
+  white-space: nowrap;
+  margin-left: 20px;
 }
 
 .app-footer {

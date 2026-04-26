@@ -27,7 +27,6 @@
 
       <div id="trackerPanel">
         <section class="panel input-panel">
-          <p class="hint">1) Выберите температуру кнопками ▲ ▼</p>
           <div class="temperature-row">
             <button id="decreaseBtn" class="arrow-btn" type="button" aria-label="Уменьшить">
               ▼
@@ -37,15 +36,32 @@
               ▲
             </button>
           </div>
-          <p class="hint">2) Нажмите «Отправить данные»</p>
           <button id="submitBtn" class="submit-btn" type="button">Отправить данные</button>
         </section>
 
         <p id="statusMessage" class="status-message status-between-panels" aria-live="polite"></p>
 
         <section class="panel history-panel">
-          <h2 class="history-title">История измерений</h2>
+          <div class="history-header">
+            <h2 class="history-title">История</h2>
+            <button
+              type="button"
+              class="copy-btn copy-btn-icon"
+              data-copy-history
+              aria-label="Скопировать историю"
+              title="Скопировать историю"
+            >
+              <span class="copy-icon" aria-hidden="true">
+                <span class="copy-sheet copy-sheet-back"></span>
+                <span class="copy-sheet copy-sheet-front"></span>
+              </span>
+              <span class="copy-done" aria-hidden="true">✓</span>
+            </button>
+          </div>
           <ul id="historyList" class="history-list"></ul>
+          <button type="button" class="copy-btn copy-btn-full" data-copy-history>
+            Скопировать историю
+          </button>
         </section>
 
         <footer class="app-footer">
