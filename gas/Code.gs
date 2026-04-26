@@ -122,9 +122,11 @@ function authenticate_(payload) {
   const token = Utilities.getUuid();
   const now = Date.now();
   const tokenMap = getTokenMap_();
+  const currentCodeHash = getCurrentCodeHash_();
   tokenMap[token] = {
     issuedAt: now,
     lastSubmitAt: 0,
+    codeHash: currentCodeHash,
   };
   saveTokenMap_(tokenMap);
 
@@ -143,6 +145,11 @@ function getExpectedAuthCode_() {
     );
   }
   return value.trim();
+}
+
+function getCurrentCodeHash_() {
+  const expectedCode = getExpectedAuthCode_();
+  return toHex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, expectedCode));
 }
 
 function getTokenMap_() {
@@ -188,7 +195,15 @@ function validateToken_(token) {
     throw new Error("Missing token");
   }
   const tokenMap = getTokenMap_();
-  if (!tokenMap[token]) {
+  const tokenData = tokenMap[token];
+  if (!tokenData) {
+    throw new Error("Token is invalid or expired");
+  }
+  // При смене семейного кода все старые токены становятся недействительными.
+  const currentCodeHash = getCurrentCodeHash_();
+  if (tokenData.codeHash !== currentCodeHash) {
+    delete tokenMap[token];
+    saveTokenMap_(tokenMap);
     throw new Error("Token is invalid or expired");
   }
 }
@@ -225,4 +240,13 @@ function jsonResponse_(data) {
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(
     ContentService.MimeType.JSON
   );
+}
+
+function toHex_(bytes) {
+  return bytes
+    .map(function (b) {
+      const value = b < 0 ? b + 256 : b;
+      return ("0" + value.toString(16)).slice(-2);
+    })
+    .join("");
 }

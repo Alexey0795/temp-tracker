@@ -18,9 +18,11 @@ const authCodeInputEl = document.getElementById("authCodeInput");
 const authBtnEl = document.getElementById("authBtn");
 const authMessageEl = document.getElementById("authMessage");
 const trackerPanelEl = document.getElementById("trackerPanel");
+const resetAccessBtnEl = document.getElementById("resetAccessBtn");
 
 let currentTemperature = 36.6;
 let authToken = "";
+let isLocalPreviewMode = false;
 
 function isFileProtocol() {
   return window.location.protocol === "file:";
@@ -82,6 +84,15 @@ function clearToken() {
   } catch (error) {
     console.error("Failed to remove token:", error);
   }
+}
+
+function resetAccess() {
+  clearToken();
+  isLocalPreviewMode = false;
+  setAuthState(false);
+  setStatus("", "");
+  setAuthMessage("Код сброшен на этом устройстве. Введите новый код.", "success");
+  authCodeInputEl.focus();
 }
 
 function setAuthState(isAuthorized) {
@@ -165,6 +176,10 @@ async function loadHistory() {
 
 async function submitTemperature() {
   const gasUrl = resolveGasUrl();
+  if (isLocalPreviewMode) {
+    setStatus("Локальный предпросмотр: отправка отключена.", "success");
+    return;
+  }
   if (!gasUrl) {
     setStatus("Укажите URL Google Apps Script в app.js", "error");
     return;
@@ -279,6 +294,7 @@ increaseBtn.addEventListener("click", () => updateTemperature(STEP));
 decreaseBtn.addEventListener("click", () => updateTemperature(-STEP));
 submitBtn.addEventListener("click", submitTemperature);
 authBtnEl.addEventListener("click", authorize);
+resetAccessBtnEl.addEventListener("click", resetAccess);
 authCodeInputEl.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     authorize();
@@ -287,12 +303,14 @@ authCodeInputEl.addEventListener("keydown", (event) => {
 
 authToken = getStoredToken();
 if (isFileProtocol()) {
+  isLocalPreviewMode = true;
+  setAuthState(true);
   setAuthMessage(
-    "Текущий запуск через file://. Для авторизации откройте сайт по http(s).",
-    "error"
+    "Локальный предпросмотр активен: можно проверить дизайн, но отправка отключена.",
+    "success"
   );
-}
-if (authToken) {
+  setStatus("Режим предпросмотра: публикация в таблицу отключена.", "success");
+} else if (authToken) {
   setAuthState(true);
   loadHistory();
 } else {

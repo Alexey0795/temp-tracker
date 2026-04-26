@@ -83,6 +83,19 @@ body {
   cursor: pointer;
 }
 
+.secondary-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
 .arrow-btn {
   width: 72px;
   font-size: 2.2rem;
@@ -91,6 +104,10 @@ body {
 .arrow-btn:active,
 .submit-btn:active {
   background: var(--accent-pressed);
+}
+
+.secondary-btn:active {
+  background: #f1f5f9;
 }
 
 .submit-btn {
